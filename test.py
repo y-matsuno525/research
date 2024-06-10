@@ -2,44 +2,60 @@ import numpy as np
 import scipy.linalg
 import matplotlib.pyplot as plt
 
-# Parameters
-L = 100  # Smaller value for visualization purposes
-d = 0.1
-alpha = 10
+L = 50  
+d = 1
+alpha = 1
 n_h = L
+t_f=9
+t_d=200
+v = 0
 
-# Function to calculate hopping amplitude
-def kappa(n, d, alpha):
-    return alpha * np.tanh((n - n_h - 0.5) * d) / (4 * d)
+def kappa(n, d, alpha, time):
+    return alpha * (n - (n_h - v * time) + 0.5) / 4
 
-# Define Hamiltonian matrix
 H = np.zeros((2*L+1, 2*L+1), dtype=complex)
-for n in range(1, 2*L+1):
-    H[n-1, n] = -kappa(n, d, alpha)
-    H[n, n-1] = -kappa(n, d, alpha)
 
-# Define initial state vector
-psi_0 = np.zeros(2*L+1, dtype=complex)
-psi_0[0] = 1  # Central site for visualization
+psi = np.zeros(2*L+1, dtype=complex)
+psi[45] = 1  
 
-# List of times for evolution
-times = np.linspace(0, 100, 300)  # More time points for a smooth animation
+times = np.linspace(0, t_f, t_d)  
 
-# Calculate the state vector at each time point
-psi_ts = []
+psi_f = []
+prob_density_n_h=[]
+
 for t in times:
-    U_t = scipy.linalg.expm(-1j * H * t)
-    psi_t = np.dot(U_t, psi_0)
-    psi_ts.append(np.abs(psi_t)**2)  # Store the probability density
+    
+    for n in range(1, 2*L+1):
+        H[n-1, n] = -kappa(n, d, alpha, t)
+        H[n, n-1] = -kappa(n, d, alpha, t)
+    
+    U_t = scipy.linalg.expm(-1j * H * (t_f/t_d))
+    psi = np.dot(U_t, psi)
+    
+    psi_f.append(np.abs(psi)**2)
 
-# Convert to numpy array for easier slicing
-psi_ts = np.array(psi_ts)
+    prob_density_n_h.append(np.abs(psi[n_h])**2)
 
-# Plotting the state evolution similar to FIG.3(a) from the paper
+psi_f = np.array(psi_f)
+
+
+
+# 確率密度の時間変化をプロット
 plt.figure(figsize=(10, 6))
-plt.imshow(psi_ts.T, extent=[times[0], times[-1], 0, 2*L+1], aspect='auto', cmap='hot')
-plt.colorbar(label='Probability Density')
-plt.title('Time Evolution of the State Vector')
+plt.plot(times, prob_density_n_h, label='Site 50')
+plt.title('Time Evolution of Probability Density at Site 50')
 plt.xlabel('Time')
-plt.ylabel('Site Index')
+plt.ylabel('Probability Density')
+plt.legend()
+plt.show()
+
+# ログスケールでの時間発展のプロット
+log_psi_f = np.log10(psi_f + 1e-21)  
+
+plt.figure(figsize=(6, 6))
+plt.imshow(log_psi_f, extent=[0, 2*L+1, times[0], times[-1]], aspect='auto', cmap='hot_r', origin='lower', vmin=-20, vmax=0)
+plt.colorbar(label='Log Probability Density')
+plt.title('Logarithmic Scale Time Evolution of the State Vector')
+plt.xlabel('Site Index')
+plt.ylabel('Time')
 plt.show()
