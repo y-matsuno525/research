@@ -10,6 +10,7 @@ d=1 #discretisation length
 w=1 #positive and controls the steepness of the curve around the horizon
 alpha=A*d/w #dimensionless slope
 l_h=50 #horizon at a distance l_h
+l_i=45 #粒子の初期位置
 t_f=9 #終状態の時刻
 d_t=200 #時間分割数
 
@@ -25,6 +26,13 @@ times = np.linspace(0, t_f, d_t)
 #粒子は最初l=45にいる
 psi[45] = 1  
 
+# 共役転置関数
+import numpy as np
+from scipy import linalg
+
+def hermitian(arr):
+    return np.conjugate(arr.T)
+
 ########################################################################################################################################################
 
 #FIG.3.(a)の再現
@@ -36,7 +44,7 @@ for t in times:
     H.fill(0)
 
     #時刻tでのハミルトニアンの生成
-    for n in range(1, L):
+    for n in range(1,L):
         H[n-1, n] = -kappa(n, l_h, alpha)
         H[n, n-1] = -kappa(n, l_h, alpha)
 
@@ -66,20 +74,38 @@ t_b=6/alpha #この時刻で密度行列を計算する
 #状態ベクトルの初期化
 psi = np.zeros(L, dtype=complex)
 
-#粒子は最初l=45にいる
-psi[45] = 1  
+#粒子の初期位置設定
+psi[l_h-1] = 1  
 
 #時間発展ユニタリ演算子を生成し、時間発展させる
 U_t = scipy.linalg.expm(-1j * H * (t_f/d_t))
 psi = np.dot(U_t, psi)
 
 # 状態ベクトルから密度行列を計算
-rho = np.outer(psi, np.conjugate(psi))
+rho = np.matmul(psi, hermitian(psi))
 
-# ホライズン内側を部分トレース
+# Reduced density matricesの定義
+rho_out = np.zeros((L-l_h, L-l_h), dtype=complex)
+
+# inの基底を作成
+basis_in_list=[]
+for i in range(l_h+1): #粒子が存在しない場合も含まれるのでl_h+1になっている
+    basis_in=np.zeros((l_h,1))
+    if i==0:
+        basis_in_list.append(basis_in)
+    else:
+        basis_in[i-1,0]=1
+        basis_in_list.append(basis_in)
+
+# outの単位行列を作成
+I_out=np.eye(L-l_h)
+
+# Reduced density matricesの計算
+for i in range(l_h):
+    rho_out += np.dot(np.dot(np.tensordot(I_out,hermitian(basis_in_list[i]),axes=0),rho),np.tensordot(I_out,basis_in_list[i],axes=0))
 
 #時刻t_bでのハミルトニアン(horizonの外)の固有ベクトルと固有値を求める
-H_out=H[l_h+1:,l_h+1:]
+H_out=H[l_h:,l_h:]
 eigenvalues, eigenvectors = np.linalg.eigh(H_out)
 
 #E_nの確率を求める
