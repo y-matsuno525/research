@@ -1,7 +1,8 @@
 import numpy as np
 import scipy.linalg
 import matplotlib.pyplot as plt
-import qutip as qt
+import matplotlib.ticker as mticker
+from scipy.optimize import curve_fit
 
 #パラメータ
 L=100 #サイト数
@@ -12,7 +13,7 @@ alpha=A*d/w #dimensionless slope
 l_h=50 #horizon at a distance l_h
 l_i=45 #粒子の初期位置
 t_f=9 #終状態の時刻
-d_t=200 #時間分割数
+d_t=500 #時間分割数
 
 #hopping amplitude
 def kappa(l, l_h, alpha):
@@ -20,11 +21,11 @@ def kappa(l, l_h, alpha):
 
 #ハミルトニアンと状態ベクトル、時間の初期化
 H = np.zeros((L, L), dtype=complex)
-psi = np.zeros(L, dtype=complex)
+psi = np.zeros((L,1), dtype=complex)
 times = np.linspace(0, t_f, d_t)
 
 #粒子は最初l=45にいる
-psi[45] = 1  
+psi[45,0] = 1  
 
 # 共役転置関数
 import numpy as np
@@ -59,11 +60,14 @@ for t in times:
 log_psi_abs=[]
 log_psi_abs = np.log10(np.array(psi_abs)+1e-30)#確率をログスケールへ 
 plt.figure(figsize=(6, 6))
-plt.imshow(log_psi_abs, extent=[0, L, times[0], times[-1]], aspect='auto', cmap='hot_r', origin='lower', vmin=-23, vmax=0)
-plt.colorbar(label='Log Probability Density')
+heatmap=plt.imshow(log_psi_abs, extent=[0, L, times[0], times[-1]], aspect='auto', cmap='hot_r', origin='lower', vmin=-24, vmax=0)
+plt.colorbar(heatmap, label='Log Probability Density',ticks=mticker.IndexLocator(base=3, offset=0))
 plt.title('Logarithmic Scale Time Evolution of the State Vector')
 plt.xlabel('Site Index')
 plt.ylabel('Time')
+plt.axvline(x=l_h, color='blue', linestyle='--', linewidth=2, label='Horizon')
+
+plt.legend()
 plt.show()
 
 ############################################################################################################################################################
@@ -72,53 +76,68 @@ plt.show()
 t_b=6/alpha #この時刻で密度行列を計算する
 
 #状態ベクトルの初期化
-psi = np.zeros(L, dtype=complex)
+psi = np.zeros((L,1), dtype=complex)
 
 #粒子の初期位置設定
-psi[l_h-1] = 1  
+psi[l_i-1,0] = 1  
 
 #時間発展ユニタリ演算子を生成し、時間発展させる
-U_t = scipy.linalg.expm(-1j * H * (t_f/d_t))
+U_t = scipy.linalg.expm(-1j * H * t_b)
 psi = np.dot(U_t, psi)
 
 # 状態ベクトルから密度行列を計算
 rho = np.matmul(psi, hermitian(psi))
 
-# Reduced density matricesの定義
+# Reduced density matricesを計算
 rho_out = np.zeros((L-l_h, L-l_h), dtype=complex)
-
-# inの基底を作成
-basis_in_list=[]
-for i in range(l_h+1): #粒子が存在しない場合も含まれるのでl_h+1になっている
-    basis_in=np.zeros((l_h,1))
-    if i==0:
-        basis_in_list.append(basis_in)
-    else:
-        basis_in[i-1,0]=1
-        basis_in_list.append(basis_in)
-
-# outの単位行列を作成
-I_out=np.eye(L-l_h)
-
-# Reduced density matricesの計算
-for i in range(l_h):
-    rho_out += np.dot(np.dot(np.tensordot(I_out,hermitian(basis_in_list[i]),axes=0),rho),np.tensordot(I_out,basis_in_list[i],axes=0))
+for i in range(L-l_h):
+    for j in range(L-l_h):
+        rho_out[i,j]=psi[l_h+i,0]*np.conjugate(psi[l_h+j,0])
 
 #時刻t_bでのハミルトニアン(horizonの外)の固有ベクトルと固有値を求める
 H_out=H[l_h:,l_h:]
 eigenvalues, eigenvectors = np.linalg.eigh(H_out)
 
-#E_nの確率を求める
-probabilities=[] #各nに対するE_nの確率を格納するリスト
-for eigenvector in eigenvectors.T:
-    probabilities.append(np.vdot(eigenvector,np.dot(rho_out,eigenvector)))
+#負のエネルギーを切る
+p_eigenvalues=[]
+p_eigenvectors=[]
+for index,eigenvalue in enumerate(eigenvalues):
+    if eigenvalue > 0:
+        p_eigenvalues.append(eigenvalue)
+        p_eigenvectors.append(eigenvectors[:,index])
+p_eigenvectors=np.array(p_eigenvectors).T
 
+#E_nの確率を求める
+p_probabilities=[] #各nに対するE_nの確率を格納するリスト
+for p_eigenvector in p_eigenvectors.T:
+    p_probabilities.append(np.vdot(hermitian(p_eigenvector),np.dot(rho_out,p_eigenvector)))
+
+# 直線部分をフィットする関数(chat gpt)
+def linear_fit(x, a, b):
+    return a * x + b
 #plot
 log_probabilities=[]
-log_probabilities=np.log(np.array(probabilities)+1e-30)
+log_probabilities=np.log(np.array(p_probabilities)+1e-30)
+# 直線部分を抜き出してフィット(chat gpt)
+fit_indices = (np.array(p_eigenvalues) > 0.5) & (np.array(p_eigenvalues) < 5) # 適切な範囲を選択
+fit_eigenvalues = np.array(p_eigenvalues)[fit_indices]
+fit_log_probabilities = log_probabilities[fit_indices]
+popt, pcov = curve_fit(linear_fit, fit_eigenvalues, fit_log_probabilities)
+slope = popt[0]
+
+
 plt.figure(figsize=(6,6))
-plt.xlim(0,10)
-plt.xticks([0,1,2,3,4,5,6,7,8,9,10])
+plt.xticks([0,1,2,3,4,5])
+plt.xlim(0,6)
+plt.ylim(-24,-6)
 plt.grid()
-plt.plot(eigenvalues, log_probabilities)
+plt.plot(p_eigenvalues, log_probabilities)
+plt.plot(fit_eigenvalues, linear_fit(fit_eigenvalues, *popt), 'r--', label=f'Fit: slope={slope:.2f}')
+plt.legend()
+plt.title('Log Probability vs Eigenvalues')
+plt.xlabel('Eigenvalues')
+plt.ylabel('Log Probability')
 plt.show()
+
+print(f"The slope of the linear fit is: {slope}")
+print(f"ホーキング温度は: {-1/slope}")
