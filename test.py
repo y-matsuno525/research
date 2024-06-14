@@ -1,61 +1,145 @@
 import numpy as np
 import scipy.linalg
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
+from scipy.optimize import curve_fit
 
-L = 50  
-d = 1
-alpha = 1
-n_h = L
-t_f=9
-t_d=200
-v = 0
+#パラメータ
+L=100 #サイト数
+A=1 #scaling factor
+d=1 #discretisation length
+w=1 #positive and controls the steepness of the curve around the horizon
+alpha=A*d/w #dimensionless slope
+l_h=50 #horizon at a distance l_h
+l_i=45 #粒子の初期位置
+t_f=9 #終状態の時刻
+d_t=500 #時間分割数
 
-def kappa(n, d, alpha, time):
-    return alpha * (n - (n_h - v * time) + 0.5) / 4
+#hopping amplitude
+def kappa(l, l_h, alpha):
+    return alpha * (l-l_h+0.5)/4
 
-H = np.zeros((2*L+1, 2*L+1), dtype=complex)
+#ハミルトニアンと状態ベクトル、時間の初期化
+H = np.zeros((L, L), dtype=complex)
+psi = np.zeros((L,1), dtype=complex)
+times = np.linspace(0, t_f, d_t)
 
-psi = np.zeros(2*L+1, dtype=complex)
-psi[45] = 1  
+#粒子は最初l=45にいる
+psi[45,0] = 1  
 
-times = np.linspace(0, t_f, t_d)  
+# 共役転置関数
+import numpy as np
+from scipy import linalg
 
-psi_f = []
-prob_density_n_h=[]
+def hermitian(arr):
+    return np.conjugate(arr.T)
 
+########################################################################################################################################################
+
+#FIG.3.(a)の再現
+psi_abs=[]#各時刻での各サイトの存在確率を格納するリスト
+#各サイトでの粒子存在確率を、各時刻で計算
 for t in times:
-    
-    for n in range(1, 2*L+1):
-        H[n-1, n] = -kappa(n, d, alpha, t)
-        H[n, n-1] = -kappa(n, d, alpha, t)
-    
-    U_t = scipy.linalg.expm(-1j * H * (t_f/t_d))
+
+    #ハミルトニアンの初期化
+    H.fill(0)
+
+    #時刻tでのハミルトニアンの生成
+    for n in range(1,L):
+        H[n-1, n] = -kappa(n, l_h, alpha)
+        H[n, n-1] = -kappa(n, l_h, alpha)
+
+    #時間発展ユニタリ演算子を生成し、時間発展させる
+    U_t = scipy.linalg.expm(-1j * H * (t_f/d_t))
     psi = np.dot(U_t, psi)
-    
-    psi_f.append(np.abs(psi)**2)
 
-    prob_density_n_h.append(np.abs(psi[n_h])**2)
+    #状態ベクトルの各成分の大きさの２乗を成分として持つベクトルをリストに追加
+    psi_abs.append(np.abs(psi)**2)
 
-psi_f = np.array(psi_f)
-
-
-
-# 確率密度の時間変化をプロット
-plt.figure(figsize=(10, 6))
-plt.plot(times, prob_density_n_h, label='Site 50')
-plt.title('Time Evolution of Probability Density at Site 50')
-plt.xlabel('Time')
-plt.ylabel('Probability Density')
-plt.legend()
-plt.show()
-
-# ログスケールでの時間発展のプロット
-log_psi_f = np.log10(psi_f + 1e-21)  
-
+#plot
+log_psi_abs=[]
+log_psi_abs = np.log10(np.array(psi_abs)+1e-30)#確率をログスケールへ 
 plt.figure(figsize=(6, 6))
-plt.imshow(log_psi_f, extent=[0, 2*L+1, times[0], times[-1]], aspect='auto', cmap='hot_r', origin='lower', vmin=-20, vmax=0)
-plt.colorbar(label='Log Probability Density')
+heatmap=plt.imshow(log_psi_abs, extent=[0, L, times[0], times[-1]], aspect='auto', cmap='hot_r', origin='lower', vmin=-24, vmax=0)
+plt.colorbar(heatmap, label='Log Probability Density',ticks=mticker.IndexLocator(base=3, offset=0))
 plt.title('Logarithmic Scale Time Evolution of the State Vector')
 plt.xlabel('Site Index')
 plt.ylabel('Time')
+plt.axvline(x=l_h, color='blue', linestyle='--', linewidth=2, label='Horizon')
+
+plt.legend()
 plt.show()
+
+############################################################################################################################################################
+
+#FIG.3.(b)の再現
+t_b=6/alpha #この時刻で密度行列を計算する
+
+#状態ベクトルの初期化
+psi = np.zeros((L,1), dtype=complex)
+
+#粒子の初期位置設定
+psi[l_i-1,0] = 1  
+
+#時間発展ユニタリ演算子を生成し、時間発展させる
+U_t = scipy.linalg.expm(-1j * H * t_b)
+psi = np.dot(U_t, psi)
+
+# 状態ベクトルから密度行列を計算
+rho = np.matmul(psi, hermitian(psi))
+
+# Reduced density matricesを計算
+rho_out = np.zeros((L-l_h, L-l_h), dtype=complex)
+rho_out_test=rho[l_h:,l_h:]
+print(rho_out-rho_out_test)
+for i in range(L-l_h):
+    for j in range(L-l_h):
+        rho_out[i,j]=psi[l_h+i,0]*np.conjugate(psi[l_h+j,0])
+
+#時刻t_bでのハミルトニアン(horizonの外)の固有ベクトルと固有値を求める
+H_out=H[l_h:,l_h:]
+eigenvalues, eigenvectors = np.linalg.eigh(H_out)
+
+#負のエネルギーを切る
+p_eigenvalues=[]
+p_eigenvectors=[]
+for index,eigenvalue in enumerate(eigenvalues):
+    if eigenvalue > 0:
+        p_eigenvalues.append(eigenvalue)
+        p_eigenvectors.append(eigenvectors[:,index])
+p_eigenvectors=np.array(p_eigenvectors).T
+
+#E_nの確率を求める
+p_probabilities=[] #各nに対するE_nの確率を格納するリスト
+for p_eigenvector in p_eigenvectors.T:
+    p_probabilities.append(np.vdot(hermitian(p_eigenvector),np.dot(rho_out_test,p_eigenvector)))
+
+# 直線部分をフィットする関数(chat gpt)
+def linear_fit(x, a, b):
+    return a * x + b
+#plot
+log_probabilities=[]
+log_probabilities=np.log(np.array(p_probabilities)+1e-30)
+# 直線部分を抜き出してフィット(chat gpt)
+fit_indices = (np.array(p_eigenvalues) > 0.5) & (np.array(p_eigenvalues) < 5) # 適切な範囲を選択
+fit_eigenvalues = np.array(p_eigenvalues)[fit_indices]
+fit_log_probabilities = log_probabilities[fit_indices]
+popt, pcov = curve_fit(linear_fit, fit_eigenvalues, fit_log_probabilities)
+slope = popt[0]
+
+
+plt.figure(figsize=(6,6))
+plt.xticks([0,1,2,3,4,5])
+plt.xlim(0,6)
+plt.ylim(-24,-6)
+plt.grid()
+plt.plot(p_eigenvalues, log_probabilities)
+plt.plot(fit_eigenvalues, linear_fit(fit_eigenvalues, *popt), 'r--', label=f'Fit: slope={slope:.2f}')
+plt.legend()
+plt.title('Log Probability vs Eigenvalues')
+plt.xlabel('Eigenvalues')
+plt.ylabel('Log Probability')
+plt.show()
+
+print(f"The slope of the linear fit is: {slope}")
+print(f"ホーキング温度は: {-1/slope}")
