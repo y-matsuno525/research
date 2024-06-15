@@ -34,6 +34,11 @@ from scipy import linalg
 def hermitian(arr):
     return np.conjugate(arr.T)
 
+#エンタングルメントエントロピー計算のために各時刻での波動関数,密度行列を格納するリスト
+psi_list=[]
+rho_out_list=[]
+entropy_list=[]
+
 ########################################################################################################################################################
 
 #FIG.3.(a)の再現
@@ -52,6 +57,9 @@ for t in times:
     #時間発展ユニタリ演算子を生成し、時間発展させる
     U_t = scipy.linalg.expm(-1j * H * (t_f/d_t))
     psi = np.dot(U_t, psi)
+    
+    #エンタングルメントエントロピー計算のために各時刻での波動関数をリストに追加
+    psi_list.append(psi)
 
     #状態ベクトルの各成分の大きさの２乗を成分として持つベクトルをリストに追加
     psi_abs.append(np.abs(psi)**2)
@@ -141,3 +149,24 @@ plt.show()
 
 print(f"The slope of the linear fit is: {slope}")
 print(f"ホーキング温度は: {-1/slope}")
+
+#######################################################################################################
+
+#エンタングルメントエントロピーの時間変化をプロット
+for psi_t in psi_list:
+    # 各時刻でReduced density matricesを計算
+    rho_out = np.zeros((L-l_h, L-l_h), dtype=complex)
+    for i in range(L-l_h):
+        for j in range(L-l_h):
+            rho_out[i,j]=psi_t[l_h+i,0]*np.conjugate(psi_t[l_h+j,0])
+
+    #エンタングルメントエントロピーの計算
+    entropy=-1*np.trace(np.dot(rho_out,np.log(rho_out)))
+    entropy_list.append(entropy)
+
+#plot
+plt.figure(figsize=(6,6))
+plt.xlim(0,6)
+plt.ylim(0,0.06)
+plt.plot(times,entropy_list)
+plt.show()
