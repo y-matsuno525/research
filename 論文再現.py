@@ -11,26 +11,23 @@ d=1 #discretisation length
 w=1 #positive and controls the steepness of the curve around the horizon
 alpha=A*d/w #dimensionless slope
 l_h=50 #horizon at a distance l_h
-l_i=45 #粒子の初期位置
+l_i= 45#粒子の初期位置
 t_f=9 #終状態の時刻
-d_t=500 #時間分割数
+d_t=300 #時間分割数
 
 #hopping amplitude
 def kappa(l, l_h, alpha):
-    return alpha * (l-l_h+0.5)/4
+    return alpha*(l-l_h+0.5)/4
 
 #ハミルトニアンと状態ベクトル、時間の初期化
 H = np.zeros((L, L), dtype=complex)
 psi = np.zeros((L,1), dtype=complex)
 times = np.linspace(0, t_f, d_t)
 
-#粒子は最初l=45にいる
-psi[45,0] = 1  
+#粒子は最初l=l_iにいる
+psi[l_i-1,0] = 1  
 
 # 共役転置関数
-import numpy as np
-from scipy import linalg
-
 def hermitian(arr):
     return np.conjugate(arr.T)
 
@@ -97,33 +94,37 @@ psi = np.dot(U_t, psi)
 rho = np.matmul(psi, hermitian(psi))
 
 # Reduced density matricesを計算
-rho_out = np.zeros((L-l_h, L-l_h), dtype=complex)
+rho_out = np.zeros((L-l_h, L-l_h), dtype=complex)#ブラックホール内部をトレースアウトした密度行列
 for i in range(L-l_h):
     for j in range(L-l_h):
         rho_out[i,j]=psi[l_h+i,0]*np.conjugate(psi[l_h+j,0])
 
 #時刻t_bでのハミルトニアン(horizonの外)の固有ベクトルと固有値を求める
-H_out=H[l_h:,l_h:]
+H_out=H[l_h:,l_h:]#ブラックホール外部のハミルトニアン
 eigenvalues, eigenvectors = np.linalg.eigh(H_out)
 
 #負のエネルギーを切る
-p_eigenvalues=[]
-p_eigenvectors=[]
+p_eigenvalues=[]#正の固有値を格納するリスト
+p_eigenvectors=[]#正の固有値に対応する固有ベクトルを格納するリスト
 for index,eigenvalue in enumerate(eigenvalues):
     if eigenvalue > 0:
         p_eigenvalues.append(eigenvalue)
         p_eigenvectors.append(eigenvectors[:,index])
-p_eigenvectors=np.array(p_eigenvectors).T
+
+p_eigenvectors=np.array(p_eigenvectors)
+
 
 #E_nの確率を求める
 p_probabilities=[] #各nに対するE_nの確率を格納するリスト
-for p_eigenvector in p_eigenvectors.T:
+for p_eigenvector in p_eigenvectors:
     p_probabilities.append(np.vdot(hermitian(p_eigenvector),np.dot(rho_out,p_eigenvector)))
 
 # 直線部分をフィットする関数(chat gpt)
 def linear_fit(x, a, b):
     return a * x + b
+    
 #plot
+#片対数へ変換
 log_probabilities=[]
 log_probabilities=np.log(np.array(p_probabilities)+1e-30)
 # 直線部分を抜き出してフィット(chat gpt)
@@ -136,8 +137,9 @@ slope = popt[0]
 
 plt.figure(figsize=(6,6))
 plt.xticks([0,1,2,3,4,5])
+plt.yticks([0,-6,-12,-18,-24])
 plt.xlim(0,6)
-plt.ylim(-24,-6)
+plt.ylim(-24,0)
 plt.grid()
 plt.plot(p_eigenvalues, log_probabilities)
 plt.plot(fit_eigenvalues, linear_fit(fit_eigenvalues, *popt), 'r--', label=f'Fit: slope={slope:.2f}')
@@ -166,7 +168,7 @@ for psi_t in psi_list:
 
 #plot
 plt.figure(figsize=(6,6))
-plt.xlim(0,6)
-plt.ylim(0,0.06)
+#plt.xlim(0,6)
+#plt.ylim(0,0.06)
 plt.plot(times,entropy_list)
 plt.show()
