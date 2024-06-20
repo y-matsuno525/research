@@ -2,6 +2,7 @@ import numpy as np
 import scipy.linalg
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
+from scipy.sparse.linalg import expm
 
 #パラメータ
 L=300 #サイト数は2L+1
@@ -51,7 +52,7 @@ entropy_list=[]
 
 #ハミルトニアンの生成
 for n in range(1,2*L+1):
-    if True:#n != 2*L:
+    if n != 2*L:
         H[n-1, n] = -kappa(n-300,alpha)
         H[n, n-1] = -kappa(n-300,alpha)
     else:
@@ -59,21 +60,36 @@ for n in range(1,2*L+1):
         H[n, n-1] = 0
         
 #時間発展ユニタリ演算子を生成し、時間発展させる
-U_t = scipy.linalg.expm(-1j * H * 4)
+U_t = expm(-1j * H * 4)
 print("ハミルトニアンがエルミートか："+str(is_hermitian(H)))
 print("時間発展演算子がユニタリか："+str(is_unitary(U_t)))
 psi = np.dot(U_t, psi)
 psi /= np.linalg.norm(psi)
 
 # Reduced density matricesを計算
-rho_out = np.zeros((L, L), dtype=complex)#ブラックホール内部をトレースアウトした密度行列
+rho_out = np.zeros((L+1, L+1), dtype=complex)#ブラックホール内部をトレースアウトした密度行列
 
-for i in range(1,L+1):
-    for j in range(1,L+1):
-        rho_out[i-1,j-1]=psi[L+i,0]*np.conjugate(psi[L+j,0])
+for i in range(1,L+2):
+    for j in range(1,L+2):
+        if (i == L+1) or (j == L+1):#(L+1,L+1)成分はあとで代入
+            rho_out[i-1,j-1]=0
+        else:
+            rho_out[i-1,j-1]=psi[L+i,0]*np.conjugate(psi[L+j,0])
+
+for i in range(L): #rho_outの(L+1,L+1)成分を代入
+    rho_out[L,L] += psi[i]*np.conjugate(psi[i])
+
+print(rho_out)
         
 #時刻t_bでのハミルトニアン(horizonの外)の固有ベクトルと固有値を求める
-H_out=H[L+1:,L+1:]#ブラックホール外部のハミルトニアン
+H_out=np.zeros((L+1, L+1), dtype=complex)#ブラックホール外部のハミルトニアン
+for i in range(1,L+2):
+    for j in range(1,L+2):
+        if (i == L+1) or (j == L+1):
+            H_out[i-1,j-1]=0
+        else:
+            H_out[i-1,j-1]=H[L+1:,L+1:][i-1,j-1]
+
 eigenvalues, eigenvectors = np.linalg.eigh(H_out)
 
 #負のエネルギーを切る
@@ -135,42 +151,47 @@ for t in times:
     psi = np.zeros((2*L+1,1), dtype=complex)
     psi[L+n_0,0] = 1
     #時間発展
-    U_t = scipy.linalg.expm(-1j * H * t)
+    U_t = expm(-1j * H * t)
     psi = np.dot(U_t, psi)
     psi /= np.linalg.norm(psi)
 
     # Reduced density matricesを計算
-    rho_out = np.zeros((L, L), dtype=complex)#ブラックホール内部をトレースアウトした密度行列
+    for i in range(1,L+2):
+        for j in range(1,L+2):
+            if (i == L+1) or (j == L+1):#(L+1,L+1)成分はあとで代入
+                rho_out[i-1,j-1]=0
+            else:
+                rho_out[i-1,j-1]=psi[L+i,0]*np.conjugate(psi[L+j,0])
 
-    for i in range(1,L+1):
-        for j in range(1,L+1):
-            rho_out[i-1,j-1]=psi[L+i,0]*np.conjugate(psi[L+j,0])
+    for i in range(L): #rho_outの(L+1,L+1)成分を代入
+        rho_out[L,L] += psi[i]*np.conjugate(psi[i])
 
     #エンタングルメントエントロピーの計算&格納
     eigenvalues,_=np.linalg.eig(rho_out)
     entropy=0
 
     #正、０、負の固有値の数を記録する変数
-    count_p=0
-    count_0=0
-    count_n=0
+    #count_p=0
+    #count_0=0
+    #count_n=0
     
-    max_eigenvalue=max(eigenvalues)
-    if max_eigenvalue > t_max_eigenvalue:
-        t_max_eigenvalue = max_eigenvalue
+    #max_eigenvalue=max(eigenvalues)
+    #if max_eigenvalue > t_max_eigenvalue:
+        #t_max_eigenvalue = max_eigenvalue
 
     for eigenvalue in eigenvalues:
-        
-        if eigenvalue < 0:
-            count_n += 1
-        elif eigenvalue == 0:
-            count_0 += 1
-        else:
-            count_p += 1
+        if eigenvalue > 0:
             entropy += -1*(eigenvalue*np.log(eigenvalue))
+        #if eigenvalue < 0:
+            #count_n += 1
+        #elif eigenvalue == 0:
+            #count_0 += 1
+        #else:
+            #count_p += 1
             
             
-    print("正：０：負は"+str(count_p)+":"+str(count_0)+":"+str(count_n)+"です。")
+            
+    #print("正：０：負は"+str(count_p)+":"+str(count_0)+":"+str(count_n)+"です。")
         
     entropy_list.append(entropy)
 
