@@ -16,6 +16,7 @@
 Black-hole evaporation in the Klein-Sauter-Heisenberg-Euler formalism　メモ
 
 歴史＆イントロ
+
 BHのエネルギーをirreductibleなものとクーロン力に依存するもの、角運動量に依存するものに分けた。あとの２つは取り出せる。取り出しプロセスはeffective ergosphereで起こる。
 Reversible and Irreversible Transformations in Black-Hole physics
 Reversible Transformations of a Charged Black Hole
