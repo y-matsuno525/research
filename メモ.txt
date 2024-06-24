@@ -11,3 +11,19 @@
 ・時間発展演算子がユニタリになってない >> 1e-13までならなってる
 ・ハミルトニアンは1e-100みてもエルミート性をもつ
 ・(-2.035440327340366e-18-2.827959220877791e-19j)が密度行列の最低固有値。最大は0.010521403480692273-1.5873241822811004e-24j
+
+6/24
+Black-hole evaporation in the Klein-Sauter-Heisenberg-Euler formalism　メモ
+
+歴史＆イントロ
+BHのエネルギーをirreductibleなものとクーロン力に依存するもの、角運動量に依存するものに分けた。あとの２つは取り出せる。取り出しプロセスはeffective ergosphereで起こる。
+Reversible and Irreversible Transformations in Black-Hole physics
+Reversible Transformations of a Charged Black Hole
+このプロセスの量子論的説明(真空分極による説明)
+Amplification of waves during reflection from a rotating black hole"
+Vacuum Polarization and the Spontaneous Loss of Charge by Black Holes 
+Particle creation by black holes（ホーキング放射原論文）
+これらの量子論的説明をクリアにするものとして、トンネル効果としてのホーキング放射
+Black-hole evaporation in the Klein-Sauter-Heisenberg-Euler formalism
+Klein-Sauter-Heisenberg-Euler formalismというのを使っているらしい
+トンネル効果解だと、未来へ向かう外向き粒子波と、過去へと向かう外向き粒子波がある。過去へと向かう外向き粒子波＝未来へと向かう内向き反粒子波なので、対生成モデルと等しい？
