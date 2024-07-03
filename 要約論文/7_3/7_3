@@ -1,0 +1,10 @@
+Exploring regular black holes within the framework of the TFD formalism
+	この論文は、非最小結合した重いスカラー場が重力とどのように相互作用するかを調査します。特に、定常で球対称な背景、すなわち規則的なブラックホール（RBH）解を仮定し、TFD（熱場の動力学）形式を用いてエネルギー・運動量テンソル、ステファン-ボルツマンの法則、カシミール効果を解析しています。これらの結果をシュワルツシルトブラックホールの結果と比較しています。
+	
+On the Coupling of Matter and Gravity to the Boundary of Space-Time
+	この論文は、物質場と重力のシステムが、空間-時間の境界にストレス-エネルギー・テンソルを通じて結合できる条件を示しています。また、この形式をカシミール効果に関連付けて議論しています。
+	
+The Gauge Theory of Measurement-Based Quantum Computationこの論文は、測定に基づく量子計算（MBQC）がゲージ理論に基づいていることを示しています。MBQCは、ユニタリゲートを使用せず、局所的な測定を通じて量子計算を行うモデルです。この研究では、MBQCの手続きをゲージ理論の観点から説明し、測定基準の適応がゲージ変換によって効果的に行われることを示しています。
+
+Quantum Simulation with Gauge Fixing: from Ising Lattice Gauge Theory to Dynamical Flux Model
+	この論文は、ゲージ固定を用いた量子シミュレーションの新しいアプローチを提案し、特にアイジング格子ゲージ理論（LGT）と動的フラックスモデルに焦点を当てています。ゲージ理論の従来のシミュレーション方法に加え、ゲージ固定によって理論を簡素化し、実験的に実現可能なモデルに変換する手法を示しています。
