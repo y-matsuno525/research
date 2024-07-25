@@ -55,8 +55,8 @@ d_matrix=np.zeros((2*L+1,2*L+1))
 for n in range(1,2*L+1):
     kappa_n = kappa(n-300,alpha)
     if n < 301:
-        d_matrix[n,n-1]=math.pow(2*c/(-1*kappa_n),1/3)
-        d_matrix[n-1,n]=math.pow(2*c/(-1*kappa_n),1/3)
+        d_matrix[n,n-1]=math.pow(-4*c/(kappa_n),1/3)
+        d_matrix[n-1,n]=math.pow(-4*c/(kappa_n),1/3)
     else:
         d_matrix[n,n-1]=math.pow(-4*c/(-1*kappa_n),1/3)
         d_matrix[n-1,n]=math.pow(-4*c/(-1*kappa_n),1/3)
@@ -71,15 +71,9 @@ d_matrix[L+1,L-1]=np.sqrt(d_matrix[L+1,L]**2+d_matrix[L,L-1]**2)
 #NNNによるHの行列要素を格納(couplingのc)
 c_matrix=np.zeros((2*L+1,2*L+1))
 for n in range(2*L-2):
-    if n > L-1:
-        c_matrix[n,n+2]=-2*c/(d_matrix[n,n+2])**3
-        c_matrix[n+2,n]=-2*c/(d_matrix[n,n+2])**3
-    elif n == L-1:
-        c_matrix[n,n+2]=2*c*(1-3*(d_matrix[L,L+1]/d_matrix[L+1,L-1])**2)/(d_matrix[L-1,L+1])**3
-        c_matrix[n+2,n]=2*c*(1-3*(d_matrix[L,L+1]/d_matrix[L+1,L-1])**2)/(d_matrix[L-1,L+1])**3
-    else:
-        c_matrix[n,n+2]=2/(d_matrix[n,n+2])**3
-        c_matrix[n+2,n]=2/(d_matrix[n,n+2])**3
+    c_matrix[n,n+2]=2*c/(d_matrix[n,n+2])**3
+    c_matrix[n+2,n]=2*c/(d_matrix[n,n+2])**3
+    
 
 #################################################################################################################################################
 

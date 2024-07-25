@@ -48,15 +48,15 @@ def is_unitary(matrix):
 ##Rydberg atomsの相互作用項の係数を計算
 
 f_inf = float('inf') #無限に離れた距離を表現するため
-c=0.1 #c_3の比例定数
+c=1 #c_3の比例定数
 
 #最近接原子間距離を格納
 d_matrix=np.zeros((2*L+1,2*L+1))
 for n in range(1,2*L+1):
     kappa_n = kappa(n-300,alpha)
     if n < 301:
-        d_matrix[n,n-1]=math.pow(2*c/(-1*kappa_n),1/3)
-        d_matrix[n-1,n]=math.pow(2*c/(-1*kappa_n),1/3)
+        d_matrix[n,n-1]=math.pow(-4*c/(kappa_n),1/3)
+        d_matrix[n-1,n]=math.pow(-4*c/(kappa_n),1/3)
     else:
         d_matrix[n,n-1]=math.pow(-4*c/(-1*kappa_n),1/3)
         d_matrix[n-1,n]=math.pow(-4*c/(-1*kappa_n),1/3)
@@ -65,21 +65,13 @@ for n in range(1,2*L+1):
 for n in range(2*L-1):
     d_matrix[n,n+2]=d_matrix[n,n+1]+d_matrix[n+1,n+2]
     d_matrix[n+2,n]=d_matrix[n,n+1]+d_matrix[n+1,n+2]
-d_matrix[L-1,L+1]=np.sqrt(d_matrix[L+1,L]**2+d_matrix[L,L-1]**2)
-d_matrix[L+1,L-1]=np.sqrt(d_matrix[L+1,L]**2+d_matrix[L,L-1]**2)
 
 #NNNによるHの行列要素を格納(couplingのc)
 c_matrix=np.zeros((2*L+1,2*L+1))
 for n in range(2*L-2):
-    if n > L-1:
-        c_matrix[n,n+2]=-2*c/(d_matrix[n,n+2])**3
-        c_matrix[n+2,n]=-2*c/(d_matrix[n,n+2])**3
-    elif n == L-1:
-        c_matrix[n,n+2]=2*c*(1-3*(d_matrix[L,L+1]/d_matrix[L+1,L-1])**2)/(d_matrix[L-1,L+1])**3
-        c_matrix[n+2,n]=2*c*(1-3*(d_matrix[L,L+1]/d_matrix[L+1,L-1])**2)/(d_matrix[L-1,L+1])**3
-    else:
-        c_matrix[n,n+2]=2/(d_matrix[n,n+2])**3
-        c_matrix[n+2,n]=2/(d_matrix[n,n+2])**3
+    c_matrix[n,n+2]=-4*c/(d_matrix[n,n+2])**3
+    c_matrix[n+2,n]=-4*c/(d_matrix[n,n+2])**3
+    
 
 #################################################################################################################################################
 
@@ -91,8 +83,12 @@ entropy_list=[]
 #ハミルトニアンの生成
 for n in range(1,2*L+1):
     if n != 2*L:
-        H[n-1, n] = -kappa(n-300,alpha)
-        H[n, n-1] = -kappa(n-300,alpha)
+        if n < 301:
+            H[n-1, n] = kappa(n-300,alpha)
+            H[n, n-1] = kappa(n-300,alpha)
+        else:
+            H[n-1, n] = -kappa(n-300,alpha)
+            H[n, n-1] = -kappa(n-300,alpha)
         if n != 2*L-1:
             H[n-1,n+1]= c_matrix[n-1,n+1]
             H[n+1,n-1]= c_matrix[n+1,n-1]
@@ -167,8 +163,8 @@ slope = popt[0]
 plt.figure(figsize=(8,7))
 plt.xticks([0,5,10,15])
 plt.yticks([-20,-15,-10,-5,0])
-plt.xlim(0,15)
-plt.ylim(-30,0)
+#plt.xlim(0,15)
+#plt.ylim(-30,0)
 plt.plot(p_eigenvalues, log_probabilities)
 plt.plot(fit_eigenvalues, linear_fit(fit_eigenvalues, *popt), 'r--', label=f'Fit: slope={slope:.2f}')
 plt.legend()

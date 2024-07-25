@@ -3,7 +3,6 @@ import scipy.linalg
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.sparse.linalg import expm
-import math
 
 #パラメータ
 L=300 #サイト数は2L+1
@@ -22,8 +21,9 @@ H = np.zeros((2*L+1, 2*L+1), dtype=complex)
 psi = np.zeros((2*L+1,1), dtype=complex)
 times = np.linspace(0, t_f, d_t)
 
-#粒子は最初n_0にいる
-psi[L+n_0,0] = 1  
+#粒子は最初、BH内部に詰まっている
+for i in range(10):
+    psi[i,0] = 1  
 
 # 共役転置関数
 def hermitian(arr):
@@ -45,43 +45,6 @@ def is_unitary(matrix):
     return np.allclose(np.dot(hermitian(matrix), matrix), identity_matrix,atol=1e-13)
 
 ################################################################################################################################################
-##Rydberg atomsの相互作用項の係数を計算
-
-f_inf = float('inf') #無限に離れた距離を表現するため
-c=0.1 #c_3の比例定数
-
-#最近接原子間距離を格納
-d_matrix=np.zeros((2*L+1,2*L+1))
-for n in range(1,2*L+1):
-    kappa_n = kappa(n-300,alpha)
-    if n < 301:
-        d_matrix[n,n-1]=math.pow(2*c/(-1*kappa_n),1/3)
-        d_matrix[n-1,n]=math.pow(2*c/(-1*kappa_n),1/3)
-    else:
-        d_matrix[n,n-1]=math.pow(-4*c/(-1*kappa_n),1/3)
-        d_matrix[n-1,n]=math.pow(-4*c/(-1*kappa_n),1/3)
-        
-#NNNの距離を格納
-for n in range(2*L-1):
-    d_matrix[n,n+2]=d_matrix[n,n+1]+d_matrix[n+1,n+2]
-    d_matrix[n+2,n]=d_matrix[n,n+1]+d_matrix[n+1,n+2]
-d_matrix[L-1,L+1]=np.sqrt(d_matrix[L+1,L]**2+d_matrix[L,L-1]**2)
-d_matrix[L+1,L-1]=np.sqrt(d_matrix[L+1,L]**2+d_matrix[L,L-1]**2)
-
-#NNNによるHの行列要素を格納(couplingのc)
-c_matrix=np.zeros((2*L+1,2*L+1))
-for n in range(2*L-2):
-    if n > L-1:
-        c_matrix[n,n+2]=-2*c/(d_matrix[n,n+2])**3
-        c_matrix[n+2,n]=-2*c/(d_matrix[n,n+2])**3
-    elif n == L-1:
-        c_matrix[n,n+2]=2*c*(1-3*(d_matrix[L,L+1]/d_matrix[L+1,L-1])**2)/(d_matrix[L-1,L+1])**3
-        c_matrix[n+2,n]=2*c*(1-3*(d_matrix[L,L+1]/d_matrix[L+1,L-1])**2)/(d_matrix[L-1,L+1])**3
-    else:
-        c_matrix[n,n+2]=2/(d_matrix[n,n+2])**3
-        c_matrix[n+2,n]=2/(d_matrix[n,n+2])**3
-
-#################################################################################################################################################
 
 #FIG.1.(a)の再現(Hawking温度)
 
@@ -91,11 +54,8 @@ entropy_list=[]
 #ハミルトニアンの生成
 for n in range(1,2*L+1):
     if n != 2*L:
-        H[n-1, n] = -kappa(n-300,alpha)
-        H[n, n-1] = -kappa(n-300,alpha)
-        if n != 2*L-1:
-            H[n-1,n+1]= c_matrix[n-1,n+1]
-            H[n+1,n-1]= c_matrix[n+1,n-1]
+        H[n-1, n] = -kappa(n-8,alpha)
+        H[n, n-1] = -kappa(n-8,alpha)
     else:
         H[n-1, n] = 0
         H[n, n-1] = 0
@@ -108,28 +68,27 @@ psi = np.dot(U_t, psi)
 psi /= np.linalg.norm(psi)
 
 # Reduced density matricesを計算
-rho_out = np.zeros((L+1, L+1), dtype=complex)#ブラックホール内部をトレースアウトした密度行列
+rho_out = np.zeros((592, 592), dtype=complex)#ブラックホール内部をトレースアウトした密度行列
 
-for i in range(1,L+2):
-    for j in range(1,L+2):
-        if (i == L+1) or (j == L+1):#(L+1,L+1)成分はあとで代入
+for i in range(1,593):
+    for j in range(1,593):
+        if (i == 592) or (j == 592):#(L+1,L+1)成分はあとで代入
             rho_out[i-1,j-1]=0
         else:
-            rho_out[i-1,j-1]=psi[L+i,0]*np.conjugate(psi[L+j,0])
+            rho_out[i-1,j-1]=psi[9+i,0]*np.conjugate(psi[9+j,0])
 
-for i in range(L): #rho_outの(L+1,L+1)成分を代入
-    rho_out[L, L] += (psi[i] * np.conjugate(psi[i])).real
-
+for i in range(10): #rho_outの(L+1,L+1)成分を代入
+    rho_out[591,591] += psi[i]*np.conjugate(psi[i])
 
         
 #時刻t_bでのハミルトニアン(horizonの外)の固有ベクトルと固有値を求める
-H_out=np.zeros((L+1, L+1), dtype=complex)#ブラックホール外部のハミルトニアン
-for i in range(1,L+2):
-    for j in range(1,L+2):
-        if (i == L+1) or (j == L+1):
+H_out=np.zeros((591+1, 591+1), dtype=complex)#ブラックホール外部のハミルトニアン
+for i in range(1,591+2):
+    for j in range(1,591+2):
+        if (i == 591+1) or (j == 591+1):
             H_out[i-1,j-1]=0
         else:
-            H_out[i-1,j-1]=H[L+1:,L+1:][i-1,j-1]
+            H_out[i-1,j-1]=H[9:,9:][i-1,j-1]
 
 eigenvalues, eigenvectors = np.linalg.eigh(H_out)
 
@@ -191,25 +150,23 @@ for t in times:
 
     psi = np.zeros((2*L+1,1), dtype=complex)
     
-    psi[L+n_0,0] = 1
+    for i in range(10):
+        psi[i,0] = 1
     #時間発展
     U_t = expm(-1j * H * t)
     psi = np.dot(U_t, psi)
     psi /= np.linalg.norm(psi)
 
     # Reduced density matricesを計算
-    for i in range(1,L+2):
-        for j in range(1,L+2):
-            if (i == L+1) or (j == L+1):#(L+1,L+1)成分はあとで代入
+    for i in range(1,591+2):
+        for j in range(1,591+2):
+            if (i == 591+1) or (j == 591+1):#(L+1,L+1)成分はあとで代入
                 rho_out[i-1,j-1]=0
             else:
-                rho_out[i-1,j-1]=psi[L+i,0]*np.conjugate(psi[L+j,0])
+                rho_out[i-1,j-1]=psi[9+i,0]*np.conjugate(psi[9+j,0])
 
-    for i in range(L): #rho_outの(L+1,L+1)成分を代入
-        rho_out[L, L] += (psi[i] * np.conjugate(psi[i])).real
-
-
-        
+    for i in range(10): #rho_outの(L+1,L+1)成分を代入
+        rho_out[591,591] += psi[i]*np.conjugate(psi[i])
 
     #エンタングルメントエントロピーの計算&格納
     eigenvalues,_=np.linalg.eig(rho_out)

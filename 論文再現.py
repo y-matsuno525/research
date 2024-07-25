@@ -45,7 +45,7 @@ def is_unitary(matrix):
 
 ################################################################################################################################################
 
-#FIG.1.(a)の再現
+#FIG.1.(a)の再現(Hawking温度)
 
 #エンタングルメントエントロピー計算のために各時刻での波動関数,密度行列を格納するリスト
 entropy_list=[]
@@ -53,8 +53,12 @@ entropy_list=[]
 #ハミルトニアンの生成
 for n in range(1,2*L+1):
     if n != 2*L:
-        H[n-1, n] = -kappa(n-300,alpha)
-        H[n, n-1] = -kappa(n-300,alpha)
+        if n < L+1:
+            H[n-1, n] = kappa(n-L,alpha)
+            H[n, n-1] = kappa(n-L,alpha)
+        else:
+            H[n-1, n] = -kappa(n-L,alpha)
+            H[n, n-1] = -kappa(n-L,alpha)
     else:
         H[n-1, n] = 0
         H[n, n-1] = 0
@@ -79,7 +83,6 @@ for i in range(1,L+2):
 for i in range(L): #rho_outの(L+1,L+1)成分を代入
     rho_out[L,L] += psi[i]*np.conjugate(psi[i])
 
-print(rho_out)
         
 #時刻t_bでのハミルトニアン(horizonの外)の固有ベクトルと固有値を求める
 H_out=np.zeros((L+1, L+1), dtype=complex)#ブラックホール外部のハミルトニアン
@@ -126,8 +129,8 @@ slope = popt[0]
 plt.figure(figsize=(8,7))
 plt.xticks([0,5,10,15])
 plt.yticks([-20,-15,-10,-5,0])
-plt.xlim(0,15)
-plt.ylim(-30,0)
+#plt.xlim(0,15)
+#plt.ylim(-30,0)
 plt.plot(p_eigenvalues, log_probabilities)
 plt.plot(fit_eigenvalues, linear_fit(fit_eigenvalues, *popt), 'r--', label=f'Fit: slope={slope:.2f}')
 plt.legend()
@@ -149,6 +152,7 @@ t_max_eigenvalue=0
 for t in times:
 
     psi = np.zeros((2*L+1,1), dtype=complex)
+    
     psi[L+n_0,0] = 1
     #時間発展
     U_t = expm(-1j * H * t)
