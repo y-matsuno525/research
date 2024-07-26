@@ -12,16 +12,22 @@ d_NNN_list=[]
 #初期設定
 l=1 #NNNのinternuclear axis間の距離（あとで可変にするかも）
 L=601 #サイト数
+c=1
+d=0.1
 theta_q_i=1/2 #最初に配置するaxisのtheta_q
 
 #metricがencodeされた関数κの定義
-def kappa(n,alpha):
+def kappa(n,alpha=10):
     return alpha*np.tanh((n-0.5)*d)/(4*d)
+
+#配置を決める方程式の定義
+def equation(x,n)
+    -kappa(n-(L-1)/2)*(l/math.sin(x))**3-c*(1-3*(math.cos(theta_m-x))**2)
 
 # 解を探す関数
 def find_root_in_range(func, lower, upper):
     try:
-        result = root_scalar(func, bracket=[lower, upper])
+        result = root_scalar(func,args=(n) bracket=[lower, upper])
         if result.converged:
             return result.root
         else:
@@ -36,9 +42,7 @@ for n in range(L):
         d_NN_list.append(l/math.sin(theta_list_NNN[0]))
     else:
         if n%2 == 0:
-            #配置を決める方程式の定義
-            def equation(x)
-                -kappa(n-(L-1)/2)*(l/math.sin(x))**3-c*(1-3*(math.cos(theta_m-x))**2)
+
                 
             root = find_root_in_range(equation, lower_bound, upper_bound) #解が複数ある場合は？
         
